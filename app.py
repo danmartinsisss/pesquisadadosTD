@@ -129,33 +129,7 @@ def consulta():
         data_final = datetime(2030, 12, 31)
         query = """
                 SELECT
-                    titulo.protocolo AS Protocolo,
-                    titulo.pdata AS Data_Protocolo,
-                    IF(titulo.registro <> '', titulo.registro, titulo.registropri) AS 'Registro/Averbacao',
-                    IF(titulo.registro <> '', titulo.rdata, titulo.dataaverb) AS Data,
-                    titulo.nomenat AS Natureza,
-                    CONCAT(pessoa.Nome, ' CPF/CNPJ: ', pessoa.CpfCgc) AS Nome,
-                    denominacaocontratante.den_descricao AS Qualificacao
-                FROM
-                    document.titulo
-                    INNER JOIN document.contratante ON contratante.sequencia = titulo.sequencia
-                    INNER JOIN document.pessoa ON pessoa.CodPes = contratante.CodPes
-                    LEFT JOIN document.denominacaocontratante ON denominacaocontratante.den_id = contratante.Denominacao
-                WHERE
-                    denominacaocontratante.den_descricao NOT LIKE '%Procurador%' 
-                    AND denominacaocontratante.den_descricao NOT LIKE '%Representante%' 
-                    AND (
-                        (titulo.rdata BETWEEN %(data_inicio)s AND %(data_final)s)
-                        OR (
-                            titulo.DataAverb BETWEEN %(data_inicio)s AND %(data_final)s
-                            AND IF(titulo.dataaverb IS NOT NULL AND titulo.registropri <> '00000000', 1, 0) = 1
-                        )
-                    )
-                    AND (pessoa.CpfCgc LIKE %(cpf_or_cnpj)s || '%%')
-                GROUP BY 
-                    titulo.sequencia
-                ORDER BY 
-                    IF(titulo.registro <> '', titulo.registro, titulo.registropri)
+                   #
                 """
         # Executar a consulta
         params = {'cpf_or_cnpj': cpf_or_cnpj + '%', 'data_inicio': data_inicio, 'data_final': data_final}
@@ -189,47 +163,7 @@ def buscas_td():
 
         query = """
                 SELECT
-                    pessoa.Nome AS Nome,
-                pessoa.CpfCgc AS CpfCnpj,
-                    IF(titulo.registro <>'', titulo.registro, titulo.registropri) 'Registro/Averbacao',
-                    titulo.nomenat Natureza,
-                    CONCAT(
-                        'PROTOCOLO: ', titulo.protocolo, ' em ', DATE_FORMAT(titulo.pdata, '%d/%m/%Y'), ' ',
-                        IF(titulo.dataaverb IS NOT NULL,
-                            CONCAT('- Averbação Av-', titulo.numaverb, '/', titulo.registropri, ' de ', DATE_FORMAT(titulo.dataaverb, '%d/%m/%Y'), '\nNATUREZA: ', titulo.Nomenat, '\nCONTRATANTE: '),
-                            CONCAT('- Registro: ', titulo.registro, ' de ', DATE_FORMAT(titulo.rdata, '%d/%m/%Y'), '\nNATUREZA: ', titulo.NomeNat, ' ')),
-                        GROUP_CONCAT(DISTINCT'\n',denominacaocontratante.den_descricao, ' CONTRATANTE: ', pessoa.Nome, ' CPF/CNPJ: ', pessoa.CpfCgc),
-                        IF(bemtd.sequencia IS NULL, '\nBENS ALIENADOS: Não há', GROUP_CONCAT(DISTINCT '\nBENS ALIENADOS: ', bemmovel.bem_descricao, '\nDESCRIÇÃO: ', bemtd.observacao))
-                    ) Texto
-                FROM
-                    document.titulo
-                    INNER JOIN document.contratante ON contratante.sequencia = titulo.sequencia
-                    INNER JOIN document.pessoa ON pessoa.CodPes = contratante.CodPes
-                    INNER JOIN document.denominacaocontratante ON denominacaocontratante.den_id = contratante.Denominacao
-                    LEFT JOIN document.bemtd ON bemtd.sequencia = titulo.Sequencia
-                    LEFT JOIN document.bemmovel ON bemmovel.bem_id = bemtd.bem_movel
-                WHERE
-                    denominacaocontratante.den_descricao NOT LIKE '%Procurador%' 
-                    AND denominacaocontratante.den_descricao NOT LIKE '%Representante%'
-                    AND ((titulo.rdata BETWEEN %s AND %s) OR (titulo.DataAverb BETWEEN %s AND %s AND (IF(titulo.dataaverb IS NOT NULL AND titulo.registropri <> '00000000', 1, 0)) = 1))
-                    AND titulo.sequencia IN (
-                        SELECT
-                            GROUP_CONCAT(titulo.sequencia)
-                        FROM
-                            document.titulo
-                            INNER JOIN document.contratante ON contratante.sequencia = titulo.sequencia
-                            INNER JOIN document.pessoa ON pessoa.CodPes = contratante.CodPes
-                            INNER JOIN document.denominacaocontratante ON denominacaocontratante.den_id = contratante.Denominacao
-                        WHERE
-                            ((titulo.rdata BETWEEN %s AND %s) OR (titulo.DataAverb BETWEEN %s AND %s AND (IF(titulo.dataaverb IS NOT NULL AND titulo.registropri <> '00000000', 1, 0)) = 1))
-                            AND pessoa.CpfCgc LIKE %s || '%%'
-                        GROUP BY 
-                            titulo.sequencia
-                    )
-                GROUP BY 
-                   titulo.sequencia
-                ORDER BY 
-                    IF(titulo.registro <>'', titulo.registro, titulo.registropri)
+                 #
           """
         params = (data_inicio, data_final, data_inicio, data_final, data_inicio, data_final, data_inicio, data_final, cpf_or_cnpj + '%')
         results = execute_query_orcamento(query, params)
@@ -254,48 +188,7 @@ def orcamento_td():
 
         query = """
                 SELECT
-                    pessoa.Nome AS Nome,
-                    pessoa.CpfCgc AS CpfCnpj,
-                    IF(titulo.registro <>'', titulo.registro, titulo.registropri) 'Registro/Averbacao',
-                    titulo.nomenat Natureza,
-                    CONCAT(
-                        'PROTOCOLO: ', titulo.protocolo, ' em ', DATE_FORMAT(titulo.pdata, '%d/%m/%Y'), ' ',
-                        IF(titulo.dataaverb IS NOT NULL,
-                            CONCAT('- Averbação Av-', titulo.numaverb, '/', titulo.registropri, ' de ', DATE_FORMAT(titulo.dataaverb, '%d/%m/%Y'), '\nNATUREZA: ', titulo.Nomenat, '\nCONTRATANTE: '),
-                            CONCAT('- Registro: ', titulo.registro, ' de ', DATE_FORMAT(titulo.rdata, '%d/%m/%Y'), '\nNATUREZA: ', titulo.NomeNat, ' - ')),
-                        GROUP_CONCAT(denominacaocontratante.den_descricao, ' CONTRATANTE: ', pessoa.Nome, ' CPF/CNPJ: ', pessoa.CpfCgc),
-                        IF(bemtd.sequencia IS NULL, '\nBENS ALIENADOS: Não há', GROUP_CONCAT(DISTINCT '\nBENS ALIENADOS: ', bemmovel.bem_descricao, '\nDESCRIÇÃO: ', bemtd.observacao))
-                    ) Texto,
-                    if(titulo.registro <>'' and exists(select a.sequencia from document.titulo a where a.sequenciapri = titulo.sequencia and a.nomenat like '%CANC%' and titulo.dataaverb is not null and titulo.numaverb>0 group by a.sequencia)<>'','Cancelado', if(titulo.dataaverb is not null and titulo.numaverb>0 and titulo.nomenat like '%CANC%','Cancelado','Ativo')) Situacao
-                FROM
-                    document.titulo
-                    INNER JOIN document.contratante ON contratante.sequencia = titulo.sequencia
-                    INNER JOIN document.pessoa ON pessoa.CodPes = contratante.CodPes
-                    INNER JOIN document.denominacaocontratante ON denominacaocontratante.den_id = contratante.Denominacao
-                    LEFT JOIN document.bemtd ON bemtd.sequencia = titulo.Sequencia
-                    LEFT JOIN document.bemmovel ON bemmovel.bem_id = bemtd.bem_movel
-                WHERE
-                    denominacaocontratante.den_descricao NOT LIKE '%Procurador%' 
-                    AND denominacaocontratante.den_descricao NOT LIKE '%Representante%'
-                    AND ((titulo.rdata BETWEEN %s AND %s) OR (titulo.DataAverb BETWEEN %s AND %s AND (IF(titulo.dataaverb IS NOT NULL AND titulo.registropri <> '00000000', 1, 0)) = 1))
-                    AND titulo.sequencia IN (
-                        SELECT
-                            GROUP_CONCAT(titulo.sequencia)
-                        FROM
-                            document.titulo
-                            INNER JOIN document.contratante ON contratante.sequencia = titulo.sequencia
-                            INNER JOIN document.pessoa ON pessoa.CodPes = contratante.CodPes
-                            INNER JOIN document.denominacaocontratante ON denominacaocontratante.den_id = contratante.Denominacao
-                        WHERE
-                            ((titulo.rdata BETWEEN %s AND %s) OR (titulo.DataAverb BETWEEN %s AND %s AND (IF(titulo.dataaverb IS NOT NULL AND titulo.registropri <> '00000000', 1, 0)) = 1))
-                            AND pessoa.CpfCgc LIKE %s || '%%'
-                        GROUP BY 
-                            titulo.sequencia
-                    )
-                GROUP BY 
-                   titulo.sequencia
-                ORDER BY 
-                    IF(titulo.registro <>'', titulo.registro, titulo.registropri)
+                  #
           """
         params = (data_inicio, data_final, data_inicio, data_final,
                   data_inicio, data_final, data_inicio, data_final, cpf_or_cnpj + '%')
